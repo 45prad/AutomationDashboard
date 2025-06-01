@@ -318,7 +318,8 @@ const Executions = () => {
         status: target.status || 'unknown',
         error: target.error || 'No error',
         output: target.output || 'No output available',
-        description: target.description || 'No description'
+        description: target.description || 'No description',
+        challengeResponse: target.challengeResponse || null
       }))
     };
   };
@@ -462,7 +463,7 @@ const Executions = () => {
                     ))}
                   </div>
                 </div>
-                <div>
+                {/* <div>
                   <span className="text-sm text-[var(--text-secondary)]">Status</span>
                   <div className="space-y-1">
                     {execution.targets.map((target, index) => (
@@ -471,7 +472,7 @@ const Executions = () => {
                       </p>
                     ))}
                   </div>
-                </div>
+                </div> */}
                 <div>
                   <span className="text-sm text-[var(--text-secondary)]">Output</span>
                   <div className="space-y-1">
@@ -489,6 +490,27 @@ const Executions = () => {
                       <p key={index} className="font-medium">
                         {target.description}
                       </p>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-sm text-[var(--text-secondary)]">Challenge Response</span>
+                  <div className="space-y-1">
+                    {execution.targets.map((target, index) => (
+                      <div key={index}>
+                        {target.challengeResponse ? (
+                          <div className="text-sm">
+                            <p className="font-medium">
+                              Status: {target.challengeResponse.statusCode}
+                            </p>
+                            <p className="truncate" title={target.challengeResponse.message}>
+                              {target.challengeResponse.message}
+                            </p>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-[var(--text-secondary)]">No response</p>
+                        )}
+                      </div>
                     ))}
                   </div>
                 </div>
