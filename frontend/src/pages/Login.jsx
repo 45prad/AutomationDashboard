@@ -15,12 +15,12 @@ const Login = () => {
 
   const navigate = useNavigate();
 
-  // useEffect(() => {
-  //   const authToken = localStorage.getItem('Hactify-Auth-token');
-  //   if (authToken) {
-  //     navigate('/');
-  //   }
-  // }, [navigate]);
+  useEffect(() => {
+    const authToken = localStorage.getItem('Hactify-Auth-token');
+    if (authToken) {
+      navigate('/');
+    }
+  }, [navigate]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });

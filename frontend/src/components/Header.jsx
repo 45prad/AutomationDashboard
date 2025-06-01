@@ -1,9 +1,10 @@
 import React from 'react';
 import { Menu, Bell, Menu as MenuIcon } from 'lucide-react';
-// import { useAuth } from '../context/AuthContext.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 
 const Header = ({ setSidebarOpen }) => {
-  // const { user, logout } = useAuth();
+ const { user, logout } = useAuth();
+
 
   return (
     <header className="bg-white border-b border-gray-200 shadow-sm">
@@ -28,10 +29,10 @@ const Header = ({ setSidebarOpen }) => {
           <div className="relative inline-block text-left">
             <div className="flex items-center">
               <span className="hidden md:block mr-3 text-gray-700">
-                {/* {user?.name} */}
+              {user?.name}
               </span>
               <button 
-                // onClick={logout}
+                onClick={logout}
                 className="px-3 py-1 bg-red-50 hover:bg-red-100 text-red-600 text-sm rounded-md font-medium transition-colors"
               >
                 Logout

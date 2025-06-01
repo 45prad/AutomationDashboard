@@ -12,14 +12,14 @@ function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
-      {/* <Route element={<ProtectedRoute />}> */}
+      <Route element={<ProtectedRoute />}>
         <Route element={<Layout />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/users" element={<Users />} />
           <Route path="/scripts" element={<Scripts />} />
           <Route path="/executions" element={<Executions />} />
         </Route>
-      {/* </Route> */}
+      </Route>
     </Routes>
   );
 }

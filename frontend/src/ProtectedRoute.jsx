@@ -1,13 +1,15 @@
+import React from 'react';
+import { Navigate, Outlet } from 'react-router-dom';
 import { useEffect, useContext } from "react";
+import { useAuth } from './context/AuthContext.jsx';
 import { useNavigate } from "react-router-dom";
-import AuthContext from './context/Authstate';
 const WT= import.meta.env.VITE_WT;
 
-function ProtectedRoute({ Component }) {
+const ProtectedRoute = () => {
     const navigate = useNavigate();
-    const context = useContext(AuthContext);
-    const { user, fetchUserRole } = context;
+  const { user, loading, fetchUserRole } = useAuth();
 
+ 
     useEffect(() => {
         const getUserRole = async () => {
             try {
@@ -28,8 +30,7 @@ function ProtectedRoute({ Component }) {
         }
     }, [user, navigate]);
 
-    // Render the component if user is authenticated and has required role
-    return <Component />;
-}
+  return  <Outlet />
+};
 
 export default ProtectedRoute;
