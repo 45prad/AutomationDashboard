@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Users, FileCode, Terminal, Check, AlertCircle, Clock } from 'lucide-react';
+import axios from 'axios';
 
 const StatCard = ({ title, value, icon: Icon, color }) => (
   <div className="card p-6 flex items-center">
@@ -52,19 +53,73 @@ const ExecutionCard = ({ execution }) => {
 };
 
 const Dashboard = () => {
-  // Dummy data
-  const stats = [
-    { title: 'Total Users', value: '24', icon: Users, color: 'bg-blue-500' },
-    { title: 'Scripts Uploaded', value: '48', icon: FileCode, color: 'bg-purple-500' },
-    { title: 'Executions', value: '186', icon: Terminal, color: 'bg-indigo-500' },
-  ];
+  const [stats, setStats] = useState([
+    { title: 'Total Users', value: '0', icon: Users, color: 'bg-blue-500' },
+    { title: 'Scripts Uploaded', value: '0', icon: FileCode, color: 'bg-purple-500' },
+    { title: 'Executions', value: '0', icon: Terminal, color: 'bg-indigo-500' },
+  ]);
+  const [recentExecutions, setRecentExecutions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const recentExecutions = [
-    { id: 1, scriptName: 'Network Scanner', user: 'John Doe', ip: '192.168.1.55', status: 'completed', timestamp: '2 minutes ago' },
-    { id: 2, scriptName: 'Security Audit', user: 'Alice Smith', ip: '10.0.0.12', status: 'failed', timestamp: '15 minutes ago' },
-    { id: 3, scriptName: 'Database Backup', user: 'Bob Johnson', ip: '172.16.254.1', status: 'pending', timestamp: '32 minutes ago' },
-    { id: 4, scriptName: 'Log Analyzer', user: 'Emma Wilson', ip: '192.168.0.24', status: 'completed', timestamp: '1 hour ago' },
-  ];
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch all data in parallel
+        const [usersRes, scriptsRes, executionsRes, ipMappingsRes] = await Promise.all([
+          axios.get(`${import.meta.env.VITE_Backend_URL}/api/auth/getallusers`),
+          axios.get(`${import.meta.env.VITE_Backend_URL}/api/scripts`),
+          axios.get(`${import.meta.env.VITE_Backend_URL}/api/executions`),
+          axios.get(`${import.meta.env.VITE_Backend_URL}/api/userIpMapping`)
+        ]);
+
+        // Update stats
+        setStats([
+          { title: 'Total Users', value: usersRes.data.length.toString(), icon: Users, color: 'bg-blue-500' },
+          { title: 'Scripts Uploaded', value: scriptsRes.data.scripts.length.toString(), icon: FileCode, color: 'bg-purple-500' },
+          { title: 'Executions', value: executionsRes.data.executions.length.toString(), icon: Terminal, color: 'bg-indigo-500' },
+        ]);
+
+        // Format and set recent executions (last 4)
+        const formattedExecutions = executionsRes.data.executions
+          .slice(0, 4)
+          .map(exec => ({
+            id: exec._id,
+            scriptName: exec.scriptName,
+            user: exec.targets[0]?.user?.email || 'Unknown',
+            ip: exec.targets[0]?.ip || 'N/A',
+            status: exec.status,
+            timestamp: new Date(exec.startedAt).toLocaleString()
+          }));
+        
+        setRecentExecutions(formattedExecutions);
+
+      } catch (err) {
+        console.error('Failed to fetch dashboard data:', err);
+        setError('Failed to load dashboard data. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="card p-4 text-red-500">
+        {error}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -87,25 +142,7 @@ const Dashboard = () => {
         </div>
       </div>
       
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="card">
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-lg font-medium text-gray-900 dark:text-white">Users by IP Allocation</h2>
-          </div>
-          <div className="p-4 h-64 flex items-center justify-center">
-            <p className="text-gray-500 dark:text-gray-400">Chart placeholder - User/IP distribution</p>
-          </div>
-        </div>
-        
-        <div className="card">
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-lg font-medium text-gray-900 dark:text-white">Execution Success Rate</h2>
-          </div>
-          <div className="p-4 h-64 flex items-center justify-center">
-            <p className="text-gray-500 dark:text-gray-400">Chart placeholder - Success/failure rate</p>
-          </div>
-        </div>
-      </div>
+     
     </div>
   );
 };

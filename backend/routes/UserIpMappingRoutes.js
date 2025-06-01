@@ -26,7 +26,7 @@ router.post('/', async (req, res) => {
     const newMapping = new UserIpMapping({
       user: req.body.user,
       ip: req.body.ip,
-      subnet: req.body.subnet,
+      subnet: req.body.subnet || '',
       description: req.body.description || ''
     });
 
@@ -67,7 +67,7 @@ router.patch('/:id', async (req, res) => {
       req.params.id,
       {
         ip: req.body.ip,
-        subnet: req.body.subnet,
+        subnet: req.body.subnet ||  '',
         description: req.body.description
       },
       { new: true }

@@ -13,7 +13,6 @@ const userIpMappingSchema = new mongoose.Schema({
   },
   subnet: {
     type: String,
-    required: true,
     trim: true
   },
   description: {

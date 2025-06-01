@@ -72,7 +72,7 @@ const Users = () => {
   };
 
   const handleAddUser = async () => {
-    if (!newUserMapping.user || !newUserMapping.ip || !newUserMapping.subnet) {
+    if (!newUserMapping.user || !newUserMapping.ip) {
       toast.error('Please fill in all required fields');
       return;
     }
@@ -81,7 +81,7 @@ const Users = () => {
       const response = await axios.post(`${backendUrl}/api/userIpMapping`, {
         user: newUserMapping.user,
         ip: newUserMapping.ip,
-        subnet: newUserMapping.subnet,
+        subnet: newUserMapping.subnet || '',
         description: newUserMapping.description || ''
       });
 
@@ -105,7 +105,7 @@ const Users = () => {
   };
 
   const handleAddIP = async () => {
-    if (!newIP.ip || !newIP.subnet || !selectedUser) {
+    if (!newIP.ip  || !selectedUser) {
       toast.error('Please fill in all required fields');
       return;
     }
@@ -114,7 +114,7 @@ const Users = () => {
       const response = await axios.post(`${backendUrl}/api/userIpMapping`, {
         user: selectedUser._id,
         ip: newIP.ip,
-        subnet: newIP.subnet,
+        subnet: newIP.subnet || '',
         description: newIP.description || ''
       });
 
@@ -312,7 +312,7 @@ const Users = () => {
                           <div>
                             <p className="font-medium">{ip.ip}</p>
                             <p className="text-sm text-[var(--text-secondary)]">
-                              Subnet: {ip.subnet}
+                              {ip.subnet}
                             </p>
                             <p className="text-sm text-[var(--text-secondary)]">
                               {ip.description}
@@ -387,14 +387,14 @@ const Users = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">Subnet Mask*</label>
+                <label className="block text-sm font-medium mb-1">Subnet Mask</label>
                 <input
                   type="text"
                   value={newUserMapping.subnet}
                   onChange={(e) => setNewUserMapping({ ...newUserMapping, subnet: e.target.value })}
                   placeholder="255.255.255.0"
                   className="input"
-                  required
+                  
                 />
               </div>
 
@@ -456,14 +456,14 @@ const Users = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">Subnet Mask*</label>
+                <label className="block text-sm font-medium mb-1">Subnet Mask</label>
                 <input
                   type="text"
                   value={newIP.subnet}
                   onChange={(e) => setNewIP({ ...newIP, subnet: e.target.value })}
                   placeholder="255.255.255.0"
                   className="input"
-                  required
+                  
                 />
               </div>
 
