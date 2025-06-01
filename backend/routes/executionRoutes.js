@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import mongoose from 'mongoose';
 import axios from 'axios'
 import dotenv from 'dotenv';
+import fetchuser from '../middleware/fetchUser.js';
 
 // Load environment variables from the .env file
 dotenv.config();
@@ -21,7 +22,7 @@ const __dirname = path.dirname(__filename);
 
 
 
-router.post('/execute', async (req, res) => {
+router.post('/execute', fetchuser, async (req, res) => {
   let session;
   try {
     session = await mongoose.startSession();
@@ -172,7 +173,7 @@ for (const target of targets) {
 });
 
 // Get all executions
-router.get('/', async (req, res) => {
+router.get('/',fetchuser, async (req, res) => {
   try {
     const executions = await Execution.find()
       .sort({ createdAt: -1 })

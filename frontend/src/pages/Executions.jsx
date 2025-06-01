@@ -2,6 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { Play, X, Plus, ChevronDown, CheckCircle2, XCircle, Clock, Search, Filter } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { ErrorBoundary } from 'react-error-boundary';
+const token = localStorage.getItem('Hactify-Auth-token');
+    
+    // Check if token exists
+    if (!token) {
+      throw new Error('Authentication token not found');
+    }
+
+    // Common headers for all requests
+    const headers = {
+      'Content-Type': 'application/json',
+      'Auth-token': token
+    };
+
+
 
 function ErrorFallback({ error, resetErrorBoundary }) {
   return (
@@ -45,7 +59,9 @@ const Executions = () => {
     const fetchData = async () => {
       try {
         // Fetch scripts
-        const scriptsResponse = await fetch(`${backendURL}/api/scripts/`);
+        const scriptsResponse = await fetch(`${backendURL}/api/scripts/`,{
+          headers
+        });
         const scriptsData = await scriptsResponse.json();
         if (scriptsData.success) {
           setScripts(scriptsData.scripts || []);
@@ -54,12 +70,16 @@ const Executions = () => {
         }
 
         // Fetch user IP mappings
-        const userIpResponse = await fetch(`${backendURL}/api/userIpMapping/`);
+        const userIpResponse = await fetch(`${backendURL}/api/userIpMapping/`,{
+          headers
+        });
         const userIpData = await userIpResponse.json();
         setUserIpMappings(userIpData || []);
 
         // Fetch executions
-        const executionsResponse = await fetch(`${backendURL}/api/executions/`);
+        const executionsResponse = await fetch(`${backendURL}/api/executions/`,{
+          headers
+        });
         const executionsData = await executionsResponse.json();
         if (executionsData.success) {
           setExecutions(executionsData.executions || []);
@@ -239,6 +259,7 @@ const Executions = () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+         'Auth-token': token
       },
       body: JSON.stringify(executionData)
     });
@@ -253,7 +274,9 @@ const Executions = () => {
     toast.success('Script execution started successfully');
     
     // Refetch executions to get complete data
-    const executionsResponse = await fetch(`${backendURL}/api/executions/`);
+    const executionsResponse = await fetch(`${backendURL}/api/executions/`,{
+      headers
+    });
     const executionsData = await executionsResponse.json();
     
     if (executionsData.success) {

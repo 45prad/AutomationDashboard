@@ -39,7 +39,7 @@ router.post('/login', async (req, res) => {
         };
 
         success = true;
-        const authtoken = jwt.sign(data, JWT_SECRET, { expiresIn: '1h' });
+        const authtoken = jwt.sign(data, JWT_SECRET, { expiresIn: '10d' });
 
         return res.json({ success, authtoken });
       } else {

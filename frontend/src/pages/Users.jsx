@@ -3,6 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Edit, X, User, Server } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
+const api = axios.create({
+  headers: {
+    'Content-Type': 'application/json',
+    'Auth-token': localStorage.getItem('Hactify-Auth-token') || '' // Get token from localStorage
+  }
+});
 
 const Users = () => {
   const [existingUsers, setExistingUsers] = useState([]);
@@ -29,7 +35,7 @@ const Users = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await axios.get(`${backendUrl}/api/auth/getallusers`);
+        const response = await api.get(`${backendUrl}/api/auth/getallusers`);
         setExistingUsers(response.data);
       } catch (error) {
         toast.error('Failed to fetch users');
@@ -44,7 +50,7 @@ const Users = () => {
   useEffect(() => {
     const fetchUserMappings = async () => {
       try {
-        const response = await axios.get(`${backendUrl}/api/userIpMapping`);
+        const response = await api.get(`${backendUrl}/api/userIpMapping`);
         setUserMappings(response.data);
       } catch (error) {
         toast.error('Failed to fetch user IP mappings');
@@ -57,7 +63,7 @@ const Users = () => {
 
   const handleUserSelect = async (user) => {
     try {
-      const response = await axios.get(`${backendUrl}/api/userIpMapping/user/${user._id}`);
+      const response = await api.get(`${backendUrl}/api/userIpMapping/user/${user._id}`);
       setSelectedUser({
         ...user,
         ipAddresses: response.data
@@ -78,7 +84,7 @@ const Users = () => {
     }
 
     try {
-      const response = await axios.post(`${backendUrl}/api/userIpMapping`, {
+      const response = await api.post(`${backendUrl}/api/userIpMapping`, {
         user: newUserMapping.user,
         ip: newUserMapping.ip,
         subnet: newUserMapping.subnet || '',
@@ -111,7 +117,7 @@ const Users = () => {
     }
 
     try {
-      const response = await axios.post(`${backendUrl}/api/userIpMapping`, {
+      const response = await api.post(`${backendUrl}/api/userIpMapping`, {
         user: selectedUser._id,
         ip: newIP.ip,
         subnet: newIP.subnet || '',
@@ -135,7 +141,7 @@ const Users = () => {
 
   const handleDeleteIP = async (ipToDelete) => {
     try {
-      await axios.delete(`${backendUrl}/api/userIpMapping/${ipToDelete._id}`);
+      await api.delete(`${backendUrl}/api/userIpMapping/${ipToDelete._id}`);
       
       setUserMappings(userMappings.filter(mapping => mapping._id !== ipToDelete._id));
       
@@ -158,7 +164,7 @@ const Users = () => {
       // First delete all IP mappings for this user
       const mappingsToDelete = userMappings.filter(mapping => mapping.user === userId);
       await Promise.all(mappingsToDelete.map(mapping => 
-        axios.delete(`${backendUrl}/api/userIpMapping/${mapping._id}`)
+        api.delete(`${backendUrl}/api/userIpMapping/${mapping._id}`)
       ));
       
       setUserMappings(userMappings.filter(mapping => mapping.user !== userId));

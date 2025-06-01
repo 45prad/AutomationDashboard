@@ -1,11 +1,12 @@
 import express from 'express';
 import UserIpMapping from '../models/UserIpMapping.js';
 import User from '../models/User.js';
+import fetchuser from '../middleware/fetchUser.js';
 
 const router = express.Router();
 
 // Add this new route to get all mappings with user details populated
-router.get('/', async (req, res) => {
+router.get('/',fetchuser, async (req, res) => {
   try {
     const mappings = await UserIpMapping.find().populate('user', 'username email role createdAt');
     res.json(mappings);
@@ -15,7 +16,7 @@ router.get('/', async (req, res) => {
 });
 
 // Create a new IP mapping for a user
-router.post('/', async (req, res) => {
+router.post('/',fetchuser, async (req, res) => {
   try {
     // Validate user exists
     const user = await User.findById(req.body.user);
@@ -38,7 +39,7 @@ router.post('/', async (req, res) => {
 });
 
 // Get all IP mappings for a specific user
-router.get('/user/:userId', async (req, res) => {
+router.get('/user/:userId', fetchuser, async (req, res) => {
   try {
     const mappings = await UserIpMapping.find({ user: req.params.userId });
     res.json(mappings);
@@ -48,7 +49,7 @@ router.get('/user/:userId', async (req, res) => {
 });
 
 // Get a specific IP mapping by ID
-router.get('/:id', async (req, res) => {
+router.get('/:id',fetchuser, async (req, res) => {
   try {
     const mapping = await UserIpMapping.findById(req.params.id);
     if (!mapping) {
@@ -61,7 +62,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Update an IP mapping
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', fetchuser, async (req, res) => {
   try {
     const updatedMapping = await UserIpMapping.findByIdAndUpdate(
       req.params.id,
@@ -84,7 +85,7 @@ router.patch('/:id', async (req, res) => {
 });
 
 // Delete an IP mapping
-router.delete('/:id', async (req, res) => {
+router.delete('/:id',fetchuser, async (req, res) => {
   try {
     const deletedMapping = await UserIpMapping.findByIdAndDelete(req.params.id);
     if (!deletedMapping) {

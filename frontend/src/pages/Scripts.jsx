@@ -2,6 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Upload, Trash2, Link2, Info } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
+const api = axios.create({
+  headers: {
+    'Content-Type': 'application/json',
+    'Auth-token': localStorage.getItem('Hactify-Auth-token') || '' // Get token from localStorage
+  }
+});
 
 const Scripts = () => {
   const [challenges, setChallenges] = useState([]);
@@ -24,8 +30,8 @@ const Scripts = () => {
       setIsLoading(true);
       try {
         const [challengesRes, scriptsRes] = await Promise.all([
-          axios.get(`${import.meta.env.VITE_Backend_URL}/api/challenges/all`),
-          axios.get(`${import.meta.env.VITE_Backend_URL}/api/scripts`)
+          api.get(`${import.meta.env.VITE_Backend_URL}/api/challenges/all`),
+          api.get(`${import.meta.env.VITE_Backend_URL}/api/scripts`)
         ]);
         
         if (challengesRes.data && Array.isArray(challengesRes.data)) {
@@ -85,7 +91,7 @@ const Scripts = () => {
 
       setIsUploading(true); // Show loading state during upload
       
-      const response = await axios.post(
+      const response = await api.post(
         `${import.meta.env.VITE_Backend_URL}/api/scripts`,
         formData,
         {
@@ -178,7 +184,7 @@ const Scripts = () => {
 
   const handleDeleteScript = async (id) => {
     try {
-      const response = await axios.delete(`${import.meta.env.VITE_Backend_URL}/api/scripts/delete-script/${id}`);
+      const response = await api.delete(`${import.meta.env.VITE_Backend_URL}/api/scripts/delete-script/${id}`);
       
       if (response.data?.success) {
         setScripts(scripts.filter(script => script.id !== id));

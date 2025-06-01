@@ -2,6 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import Script from '../models/Script.js';
 import Challenge from '../models/challenge.js';
+import fetchuser from '../middleware/fetchUser.js';
 
 const router = express.Router();
 
@@ -30,7 +31,7 @@ const upload = multer({
 });
 
 // POST / - Add a new script with file upload
-router.post('/', upload.single('file'), async (req, res) => {
+router.post('/',fetchuser, upload.single('file'), async (req, res) => {
   try {
     const { name, description, challenge, language } = req.body;
 
@@ -95,7 +96,7 @@ router.post('/', upload.single('file'), async (req, res) => {
 });
 
 
-router.get('/', async (req, res) => {
+router.get('/', fetchuser, async (req, res) => {
   try {
     const scripts = await Script.find()
       .populate('challenge', 'name _id') // Only include challenge name and id
@@ -131,7 +132,7 @@ router.get('/', async (req, res) => {
 });
 
 
-router.delete('/delete-script/:id', async (req, res) => {
+router.delete('/delete-script/:id', fetchuser, async (req, res) => {
   const { id } = req.params;
 
   if (!id || id === 'undefined') {

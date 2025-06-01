@@ -1,10 +1,10 @@
 import express from 'express';
 import Challenge from '../models/challenge.js'; // Adjust path as needed
-
+import fetchuser from '../middleware/fetchUser.js';
 const router = express.Router();
 
 // GET /all - Get all challenge names and IDs for dropdown
-router.get('/all', async (req, res) => {
+router.get('/all', fetchuser, async (req, res) => {
     try {
         const challenges = await Challenge.find({ 
             state: "visible" 

@@ -1,6 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Users, FileCode, Terminal, Check, AlertCircle, Clock } from 'lucide-react';
 import axios from 'axios';
+// Create axios instance with default headers
+const api = axios.create({
+  headers: {
+    'Content-Type': 'application/json',
+    'Auth-token': localStorage.getItem('Hactify-Auth-token') || '' // Get token from localStorage
+  }
+});
 
 const StatCard = ({ title, value, icon: Icon, color }) => (
   <div className="card p-6 flex items-center">
@@ -67,10 +74,10 @@ const Dashboard = () => {
       try {
         // Fetch all data in parallel
         const [usersRes, scriptsRes, executionsRes, ipMappingsRes] = await Promise.all([
-          axios.get(`${import.meta.env.VITE_Backend_URL}/api/auth/getallusers`),
-          axios.get(`${import.meta.env.VITE_Backend_URL}/api/scripts`),
-          axios.get(`${import.meta.env.VITE_Backend_URL}/api/executions`),
-          axios.get(`${import.meta.env.VITE_Backend_URL}/api/userIpMapping`)
+          api.get(`${import.meta.env.VITE_Backend_URL}/api/auth/getallusers`),
+          api.get(`${import.meta.env.VITE_Backend_URL}/api/scripts`),
+          api.get(`${import.meta.env.VITE_Backend_URL}/api/executions`),
+          api.get(`${import.meta.env.VITE_Backend_URL}/api/userIpMapping`)
         ]);
 
         // Update stats
