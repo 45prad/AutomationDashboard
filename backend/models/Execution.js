@@ -37,7 +37,11 @@ const ExecutionSchema = new mongoose.Schema({
         default: 'pending'
       },
       output: String,
-      error: String
+      error: String,
+       challengeResponse: {
+        statusCode: Number,  // 'success', 'already_solved', 'error'
+        message: String // The response message from the API
+      }
     }
   ],
   duration: String,

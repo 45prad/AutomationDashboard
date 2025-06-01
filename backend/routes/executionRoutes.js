@@ -113,8 +113,24 @@ for (const target of targets) {
 
       const response = await axios.get(challengeUrl);
       console.log(`[${target.ip}] Challenge API Response:`, response.data);
+
+
+         execution.targets[targetIndex].challengeResponse = {
+        statusCode: response.status,
+        message: response.data.message || '',
+         
+      };
+      await execution.save({ session });
     } catch (apiError) {
       console.error(`[${target.ip}] Challenge API Error:`, apiError.message);
+
+       execution.targets[targetIndex].challengeResponse = {
+        statusCode: apiError.response?.status || 500,
+        message: apiError.response?.data?.message || apiError.message,
+       
+      };
+      
+      await execution.save({ session });
     }
   }
 }
