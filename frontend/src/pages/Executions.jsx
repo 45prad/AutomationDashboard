@@ -4,10 +4,10 @@ import { toast } from 'react-hot-toast';
 import { ErrorBoundary } from 'react-error-boundary';
 const token = localStorage.getItem('Hactify-Auth-token');
     
-    // Check if token exists
-    if (!token) {
-      throw new Error('Authentication token not found');
-    }
+    // // Check if token exists
+    // if (!token) {
+    //   throw new Error('Authentication token not found');
+    // }
 
     // Common headers for all requests
     const headers = {
