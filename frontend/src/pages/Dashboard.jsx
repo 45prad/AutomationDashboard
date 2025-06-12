@@ -2,12 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Users, FileCode, Terminal, Check, AlertCircle, Clock } from 'lucide-react';
 import axios from 'axios';
 // Create axios instance with default headers
-const api = axios.create({
-  headers: {
-    'Content-Type': 'application/json',
-    'Auth-token': localStorage.getItem('Hactify-Auth-token') || '' // Get token from localStorage
-  }
-});
+
 
 const StatCard = ({ title, value, icon: Icon, color }) => (
   <div className="card p-6 flex items-center">
@@ -71,34 +66,48 @@ const Dashboard = () => {
 
   useEffect(() => {
     const fetchData = async () => {
+      const token = localStorage.getItem('Hactify-Auth-token');
+
+      if (!token) {
+        setError('User not authenticated. Please log in again.');
+        setLoading(false);
+        return;
+      }
+
       try {
-        // Fetch all data in parallel
-        const [usersRes, scriptsRes, executionsRes, ipMappingsRes] = await Promise.all([
-          api.get(`${import.meta.env.VITE_Backend_URL}/api/auth/getallusers`),
-          api.get(`${import.meta.env.VITE_Backend_URL}/api/scripts`),
-          api.get(`${import.meta.env.VITE_Backend_URL}/api/executions`),
-          api.get(`${import.meta.env.VITE_Backend_URL}/api/userIpMapping`)
+        const config = {
+          headers: {
+            'Content-Type': 'application/json',
+            'Auth-token': token
+          }
+        };
+
+        // Fetch counts in parallel
+        const [usersCountRes, scriptsCountRes, executionsCountRes, recentExecutionsRes] = await Promise.all([
+          axios.get(`${import.meta.env.VITE_Backend_URL}/api/auth/count/users`, config),
+          axios.get(`${import.meta.env.VITE_Backend_URL}/api/scripts/count/scripts`, config),
+          axios.get(`${import.meta.env.VITE_Backend_URL}/api/executions/count/executions`, config),
+          axios.get(`${import.meta.env.VITE_Backend_URL}/api/executions/recent`, config)
         ]);
 
-        // Update stats
+        // Update stats with counts directly from backend
         setStats([
-          { title: 'Total Users', value: usersRes.data.length.toString(), icon: Users, color: 'bg-blue-500' },
-          { title: 'Scripts Uploaded', value: scriptsRes.data.scripts.length.toString(), icon: FileCode, color: 'bg-purple-500' },
-          { title: 'Executions', value: executionsRes.data.executions.length.toString(), icon: Terminal, color: 'bg-indigo-500' },
+          { title: 'Total Users', value: usersCountRes.data.count.toString(), icon: Users, color: 'bg-blue-500' },
+          { title: 'Scripts Uploaded', value: scriptsCountRes.data.count.toString(), icon: FileCode, color: 'bg-purple-500' },
+          { title: 'Executions', value: executionsCountRes.data.count.toString(), icon: Terminal, color: 'bg-indigo-500' },
         ]);
 
-        // Format and set recent executions (last 4)
-        const formattedExecutions = executionsRes.data.executions
-          .slice(0, 4)
+        // Format recent executions
+        const formattedExecutions = recentExecutionsRes.data.executions
           .map(exec => ({
             id: exec._id,
-            scriptName: exec.scriptName,
+            scriptName: exec.script?.name || 'Unknown Script',
             user: exec.targets[0]?.user?.email || 'Unknown',
             ip: exec.targets[0]?.ip || 'N/A',
             status: exec.status,
             timestamp: new Date(exec.startedAt).toLocaleString()
           }));
-        
+
         setRecentExecutions(formattedExecutions);
 
       } catch (err) {

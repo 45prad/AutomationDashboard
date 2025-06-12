@@ -3,12 +3,38 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Edit, X, User, Server } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
-const api = axios.create({
+
+  const backendUrl = import.meta.env.VITE_Backend_URL;
+
+  const api = axios.create({
+  baseURL: backendUrl,
   headers: {
-    'Content-Type': 'application/json',
-    'Auth-token': localStorage.getItem('Hactify-Auth-token') || '' // Get token from localStorage
+    'Content-Type': 'application/json'
   }
 });
+
+// Add request interceptor to inject token
+api.interceptors.request.use(config => {
+  const token = localStorage.getItem('Hactify-Auth-token');
+  if (token) {
+    config.headers['Auth-token'] = token;
+  }
+  return config;
+}, error => {
+  return Promise.reject(error);
+});
+
+api.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response && error.response.status === 401) {
+      // Handle unauthorized error
+      localStorage.removeItem('Hactify-Auth-token');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
 
 const Users = () => {
   const [existingUsers, setExistingUsers] = useState([]);
@@ -29,11 +55,15 @@ const Users = () => {
     description: ''
   });
 
-  const backendUrl = import.meta.env.VITE_Backend_URL;
 
   // Fetch all users
   useEffect(() => {
     const fetchUsers = async () => {
+       const token = localStorage.getItem('Hactify-Auth-token');
+    if (!token) {
+      // Redirect to login or handle missing token
+      return;
+    }
       try {
         const response = await api.get(`${backendUrl}/api/auth/getallusers`);
         setExistingUsers(response.data);
@@ -49,6 +79,11 @@ const Users = () => {
   // Fetch all user IP mappings
   useEffect(() => {
     const fetchUserMappings = async () => {
+       const token = localStorage.getItem('Hactify-Auth-token');
+    if (!token) {
+      // Redirect to login or handle missing token
+      return;
+    }
       try {
         const response = await api.get(`${backendUrl}/api/userIpMapping`);
         setUserMappings(response.data);

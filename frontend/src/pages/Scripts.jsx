@@ -2,12 +2,38 @@ import React, { useState, useEffect } from 'react';
 import { Upload, Trash2, Link2, Info } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
+
+
 const api = axios.create({
+  
   headers: {
-    'Content-Type': 'application/json',
-    'Auth-token': localStorage.getItem('Hactify-Auth-token') || '' // Get token from localStorage
+    'Content-Type': 'application/json'
   }
 });
+
+// Request interceptor to add auth token
+api.interceptors.request.use(config => {
+  const token = localStorage.getItem('Hactify-Auth-token');
+  if (token) {
+    config.headers['Auth-token'] = token;
+  }
+  return config;
+}, error => {
+  return Promise.reject(error);
+});
+
+// Response interceptor to handle 401 errors
+api.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response && error.response.status === 401) {
+      // Handle unauthorized error (e.g., redirect to login)
+      localStorage.removeItem('Hactify-Auth-token');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
 
 const Scripts = () => {
   const [challenges, setChallenges] = useState([]);

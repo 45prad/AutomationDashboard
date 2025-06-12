@@ -87,5 +87,15 @@ router.get('/getallusers', async (req, res) => {
   }
 });
 
+router.get('/count/users', async (req, res) => {
+  try {
+    const count = await User.countDocuments({ role: BT });
+    res.json({ count });
+  } catch (error) {
+    console.error('Error counting users:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
 
 export default router;

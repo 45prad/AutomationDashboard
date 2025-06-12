@@ -2,18 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Play, X, Plus, ChevronDown, CheckCircle2, XCircle, Clock, Search, Filter } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { ErrorBoundary } from 'react-error-boundary';
-const token = localStorage.getItem('Hactify-Auth-token');
-    
-    // // Check if token exists
-    // if (!token) {
-    //   throw new Error('Authentication token not found');
-    // }
+import { useNavigate } from 'react-router-dom';
 
-    // Common headers for all requests
-    const headers = {
-      'Content-Type': 'application/json',
-      'Auth-token': token
-    };
 
 
 
@@ -34,7 +24,23 @@ function ErrorFallback({ error, resetErrorBoundary }) {
 }
 
 const Executions = () => {
+  
+
+    const navigate = useNavigate();
   const backendURL = import.meta.env.VITE_Backend_URL;
+  const token = localStorage.getItem('Hactify-Auth-token');
+  
+  // Redirect if no token
+  useEffect(() => {
+    if (!token) {
+      navigate('/login');
+    }
+  }, [token, navigate]);
+
+  const headers = {
+    'Content-Type': 'application/json',
+    'Auth-token': token
+  };
   const [scripts, setScripts] = useState([]);
   const [userIpMappings, setUserIpMappings] = useState([]);
   const [executions, setExecutions] = useState([]);
@@ -56,7 +62,9 @@ const Executions = () => {
   const [statusFilter, setStatusFilter] = useState('all');
 
   useEffect(() => {
+      if (!token) return;
     const fetchData = async () => {
+      
       try {
         // Fetch scripts
         const scriptsResponse = await fetch(`${backendURL}/api/scripts/`,{

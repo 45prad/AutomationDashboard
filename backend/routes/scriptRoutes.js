@@ -154,4 +154,16 @@ router.delete('/delete-script/:id', fetchuser, async (req, res) => {
 });
 
 
+// New route to get script count
+router.get('/count/scripts', fetchuser, async (req, res) => {
+  try {
+    const count = await Script.countDocuments();
+    res.json({ count });
+  } catch (error) {
+    console.error('Error counting scripts:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+
 export default router;

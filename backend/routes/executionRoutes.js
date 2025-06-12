@@ -187,4 +187,32 @@ router.get('/',fetchuser, async (req, res) => {
   }
 });
 
+// New route to get execution count
+router.get('/count/executions', fetchuser, async (req, res) => {
+  try {
+    const count = await Execution.countDocuments();
+    res.json({ count });
+  } catch (error) {
+    console.error('Error counting executions:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+
+// Updated executions route to return only recent executions
+router.get('/recent', fetchuser, async (req, res) => {
+  try {
+    const executions = await Execution.find()
+      .sort({ createdAt: -1 })
+      .limit(4) // Only get the 4 most recent
+      .populate('script', 'name language')
+      .populate('targets.user', 'email');
+
+    res.json({ success: true, executions });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 export default router;
