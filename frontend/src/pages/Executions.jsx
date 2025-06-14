@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, X, Plus, ChevronDown, CheckCircle2, XCircle, Clock, Search, Filter } from 'lucide-react';
+import { Play, X, Plus, ChevronDown, CheckCircle2, XCircle, Clock, Search, Filter, Info  } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useNavigate } from 'react-router-dom';
@@ -60,6 +60,8 @@ const Executions = () => {
   const [selectedUserIPs, setSelectedUserIPs] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+   const [showOutputModal, setShowOutputModal] = useState(false);
+  const [currentOutput, setCurrentOutput] = useState('');
 
   useEffect(() => {
       if (!token) return;
@@ -113,6 +115,11 @@ const Executions = () => {
     fetchData();
   }, []);
 
+    const handleShowOutput = (output) => {
+    setCurrentOutput(output);
+    setShowOutputModal(true);
+  };
+
   const handleAddUserIP = () => {
     setSelectedUserIPs([...selectedUserIPs, { userId: '', ip: '' }]);
   };
@@ -133,67 +140,7 @@ const Executions = () => {
     setSelectedUserIPs(selectedUserIPs.filter((_, i) => i !== index));
   };
 
-  // const handleExecute = async () => {
-  //   if (!selectedScript) {
-  //     toast.error('Please select a script');
-  //     return;
-  //   }
-
-  //   if (selectedUserIPs.length === 0) {
-  //     toast.error('Please select at least one user and IP');
-  //     return;
-  //   }
-
-  //   if (selectedUserIPs.some(item => !item.userId || !item.ip)) {
-  //     toast.error('Please fill in all user and IP selections');
-  //     return;
-  //   }
-
-  //   try {
-  //     const executionData = {
-  //       scriptId: selectedScript,
-  //       targets: selectedUserIPs.map(item => {
-  //         const user = usersWithIPs.find(u => u._id === item.userId);
-  //         const ipInfo = user?.ipAddresses?.find(ip => ip.ip === item.ip);
-          
-  //         return {
-  //           userId: item.userId,
-  //           userEmail: user?.email || 'unknown@example.com',
-  //           ip: item.ip,
-  //           description: ipInfo?.description || ''
-  //         };
-  //       })
-  //     };
-
-  //     const response = await fetch('http://localhost:5000/api/executions/execute', {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //       },
-  //       body: JSON.stringify(executionData)
-  //     });
-
-  //     const data = await response.json();
-
-  //     if (!response.ok) {
-  //       throw new Error(data.message || 'Failed to execute script');
-  //     }
-
-  //     toast.success('Script execution started successfully');
-      
-  //     if (data.execution) {
-  //       setExecutions(prev => [data.execution, ...prev]);
-  //     }
-
-  //     setShowExecuteModal(false);
-  //     setSelectedScript('');
-  //     setSelectedUserIPs([]);
-  //   } catch (error) {
-  //     console.error('Execution error:', error);
-  //     toast.error(error.message || 'Failed to execute script');
-  //   }
-  // };
-
+ 
 
 
   const handleExecute = async () => {
@@ -505,15 +452,25 @@ const Executions = () => {
                   </div>
                 </div> */}
                 <div>
-                  <span className="text-sm text-[var(--text-secondary)]">Output</span>
-                  <div className="space-y-1">
-                    {execution.targets.map((target, index) => (
-                      <p key={index} className="font-medium truncate" title={target.output}>
-                        {target.output}
-                      </p>
-                    ))}
-                  </div>
-                </div>
+        <span className="text-sm text-[var(--text-secondary)]">Output</span>
+        <div className="space-y-1">
+          {execution.targets.map((target, index) => (
+            <div key={index} className="flex items-center gap-2">
+              <p className="font-medium truncate flex-1" title={target.output}>
+                {target.output}
+              </p>
+              <button 
+                onClick={() => handleShowOutput(target.output)}
+                className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                aria-label="View full output"
+              >
+                <Info className="h-4 w-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
                 <div>
                   <span className="text-sm text-[var(--text-secondary)]">Description</span>
                   <div className="space-y-1">
@@ -562,6 +519,35 @@ const Executions = () => {
           </div>
         )}
       </div>
+
+       {showOutputModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-[var(--background)] rounded-lg p-6 w-full max-w-3xl max-h-[80vh] flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium">Full Output</h3>
+              <button 
+                onClick={() => setShowOutputModal(false)}
+                className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="bg-[var(--background-secondary)] p-4 rounded flex-1 overflow-auto">
+              <pre className="whitespace-pre-wrap break-words text-sm">
+                {currentOutput || 'No output available'}
+              </pre>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button 
+                onClick={() => setShowOutputModal(false)}
+                className="btn btn-primary"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showExecuteModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
