@@ -173,14 +173,164 @@ const __dirname = path.dirname(__filename);
 // });
 
 
+// router.post('/execute', fetchuser, async (req, res) => {
+//   let session;
+//   try {
+//     session = await mongoose.startSession();
+//     session.startTransaction();
+
+//     const { scriptId, targets } = req.body;
+//     const startTime = Date.now();
+
+//     const script = await Script.findById(scriptId).session(session);
+//     if (!script) {
+//       await session.abortTransaction();
+//       await session.endSession();
+//       return res.status(404).json({ success: false, message: 'Script not found' });
+//     }
+
+//     const filePath = path.resolve(__dirname, '../', script.filePath);
+//     if (!fs.existsSync(filePath)) {
+//       await session.abortTransaction();
+//       await session.endSession();
+//       return res.status(404).json({ 
+//         success: false, 
+//         message: 'Script file not found',
+//         path: filePath
+//       });
+//     }
+
+//     const execution = new Execution({
+//       script: script._id,
+//       scriptName: script.name,
+//       status: 'running',
+//       targets: targets.map(target => ({
+//         user: target.userId,
+//         ip: target.ip,
+//         description: target.description,
+//         status: 'pending'
+//       })),
+//       startedAt: new Date(startTime)
+//     });
+
+//     await execution.save({ session });
+
+//     const language = script.language.toLowerCase();
+//     for (const target of targets) {
+//       let command;
+//       switch (language) {
+//         case 'python':
+//           command = `python ${filePath} ${target.ip}`;
+//           break;
+//         case 'bash':
+//           command = `bash ${filePath} ${target.ip}`;
+//           break;
+//         default:
+//           await session.abortTransaction();
+//           await session.endSession();
+//           return res.status(400).json({ success: false, message: 'Unsupported script language' });
+//       }
+
+//       console.log(`\n[Executing for IP: ${target.ip}]`);
+//       console.log(`Command: ${command}`);
+
+//       // Execute command and explicitly check exit code
+//       const { stdout, stderr, code } = await new Promise((resolve) => {
+//         exec(command, (error, stdout, stderr) => {
+//           // Explicit exit code handling per attacker script convention
+//           // 0 = success, 1 = failure, anything else = failure
+//           const exitCode = error ? (error.code === 0 ? 0 : 1) : 0;
+//           resolve({
+//             stdout,
+//             stderr,
+//             code: exitCode
+//           });
+//         });
+//       });
+
+//       const targetIndex = execution.targets.findIndex(t => t.ip === target.ip);
+//       execution.targets[targetIndex].output = stdout;
+//       execution.targets[targetIndex].error = stderr || null;
+//       execution.targets[targetIndex].status = code === 0 ? 'completed' : 'failed';
+
+//       await execution.save({ session});
+
+//       console.log(`[${target.ip}] Exit Code: ${code}`);
+//       console.log(`[${target.ip}] STDOUT: ${stdout}`);
+//       if (code !== 0) {
+//         console.error(`[${target.ip}] STDERR: ${stderr}`);
+//       }
+
+//       // Only proceed if attack was successful (exit code 0)
+//       if (code === 0) {
+//         try {
+//           const challengeId = script.challenge.toString();
+//           const userId = target.userId;
+//           const challengeUrl = `${process.env.CHALLENGE_BASE_URL}/${challengeId}/${userId}`;
+
+//           const response = await axios.get(challengeUrl);
+//           console.log(`[${target.ip}] Challenge API Response:`, response.data);
+
+//           execution.targets[targetIndex].challengeResponse = {
+//             statusCode: response.status,
+//             message: response.data.message || 'Challenge completed successfully',
+//             success: true
+//           };
+//         } catch (apiError) {
+//           console.error(`[${target.ip}] Challenge API Error:`, apiError.message);
+//           execution.targets[targetIndex].challengeResponse = {
+//             statusCode: apiError.response?.status || 500,
+//             message: apiError.message || 'Challenge API failed',
+//             success: false
+//           };
+//         }
+//         await execution.save({ session });
+//       }
+//     }
+
+//     // Determine final execution status
+//     execution.status = execution.targets.every(t => t.status === 'completed') 
+//       ? 'completed' 
+//       : 'failed';
+
+//     execution.completedAt = new Date();
+//     execution.duration = `${Math.floor((Date.now() - startTime) / 60000)}m ${Math.floor((Date.now() - startTime) % 60000 / 1000)}s`;
+
+//     await execution.save({ session });
+//     await session.commitTransaction();
+//     await session.endSession();
+
+//     return res.json({
+//       success: true,
+//       execution: execution.toObject(),
+//       message: 'Execution completed'
+//     });
+
+//   } catch (err) {
+//     console.error('Execution error:', err);
+//     if (session && session.inTransaction()) {
+//       await session.abortTransaction();
+//     }
+//     if (session) {
+//       await session.endSession();
+//     }
+//     return res.status(500).json({ success: false, message: 'Server error' });
+//   }
+// });
+
+
+
+import { spawn } from 'child_process';
+
+
 router.post('/execute', fetchuser, async (req, res) => {
   let session;
+
   try {
     session = await mongoose.startSession();
     session.startTransaction();
 
     const { scriptId, targets } = req.body;
-    const startTime = Date.now();
 
     const script = await Script.findById(scriptId).session(session);
     if (!script) {
@@ -200,7 +350,7 @@ router.post('/execute', fetchuser, async (req, res) => {
       });
     }
 
-    const execution = new Execution({
+    const execution = new Execution({ 
       script: script._id,
       scriptName: script.name,
       status: 'running',
@@ -210,59 +360,51 @@ router.post('/execute', fetchuser, async (req, res) => {
         description: target.description,
         status: 'pending'
       })),
-      startedAt: new Date(startTime)
+      startedAt: new Date()
     });
 
-    await execution.save({ session });
+    await execution.save({session});
 
-    const language = script.language.toLowerCase();
+// Loop through each target
     for (const target of targets) {
-      let command;
-      switch (language) {
-        case 'python':
-          command = `python ${filePath} ${target.ip}`;
-          break;
-        case 'bash':
-          command = `bash ${filePath} ${target.ip}`;
-          break;
-        default:
-          await session.abortTransaction();
-          await session.endSession();
-          return res.status(400).json({ success: false, message: 'Unsupported script language' });
-      }
+      console.log(`\n[Running script for ${target.ip}]`);
 
-      console.log(`\n[Executing for IP: ${target.ip}]`);
-      console.log(`Command: ${command}`);
+      // Spawn process safely with separate arguments
+      let cmd = script.language.toLowerCase() === 'python' ? 'python' : 'bash';
+      let args = [filePath, target.ip ];
 
-      // Execute command and explicitly check exit code
-      const { stdout, stderr, code } = await new Promise((resolve) => {
-        exec(command, (error, stdout, stderr) => {
-          // Explicit exit code handling per attacker script convention
-          // 0 = success, 1 = failure, anything else = failure
-          const exitCode = error ? (error.code === 0 ? 0 : 1) : 0;
-          resolve({
-            stdout,
-            stderr,
-            code: exitCode
-          });
+      const child = spawn(cmd, args);
+
+      let stdout = '';
+      let stderr = '';
+      let exitCode = 0;
+
+      child.stdout.on('data', (data) => {
+        stdout += data.toString();
+      });
+
+      child.stderr.on('data', (data) => {
+        stderr += data.toString();
+      });
+
+      await new Promise((resolve) => {
+        child.on('close', (code) => {
+          exitCode = code;
+          resolve();
         });
       });
 
+      console.log(`[${target.ip}] Exit code: ${exitCode}`);
+
+      // Update execution
       const targetIndex = execution.targets.findIndex(t => t.ip === target.ip);
-      execution.targets[targetIndex].output = stdout;
-      execution.targets[targetIndex].error = stderr || null;
-      execution.targets[targetIndex].status = code === 0 ? 'completed' : 'failed';
+      execution.targets[targetIndex].output = stdout.trim();
+      execution.targets[targetIndex].error = stderr.trim() ? stderr.trim() : null;
+      execution.targets[targetIndex].status = exitCode === 0 ? 'completed' : 'failed';
+      await execution.save({session});
 
-      await execution.save({ session});
-
-      console.log(`[${target.ip}] Exit Code: ${code}`);
-      console.log(`[${target.ip}] STDOUT: ${stdout}`);
-      if (code !== 0) {
-        console.error(`[${target.ip}] STDERR: ${stderr}`);
-      }
-
-      // Only proceed if attack was successful (exit code 0)
-      if (code === 0) {
+// Handle API callback if script was successful
+      if (exitCode === 0) {
         try {
           const challengeId = script.challenge.toString();
           const userId = target.userId;
@@ -284,39 +426,34 @@ router.post('/execute', fetchuser, async (req, res) => {
             success: false
           };
         }
-        await execution.save({ session });
+        await execution.save({session});
       }
     }
 
-    // Determine final execution status
-    execution.status = execution.targets.every(t => t.status === 'completed') 
-      ? 'completed' 
-      : 'failed';
-
+    // Finalize execution
+    execution.status = execution.targets.every(t => t.status === 'completed') ? 'completed' : 'failed';
     execution.completedAt = new Date();
-    execution.duration = `${Math.floor((Date.now() - startTime) / 60000)}m ${Math.floor((Date.now() - startTime) % 60000 / 1000)}s`;
 
-    await execution.save({ session });
+    execution.duration = `${Math.floor((Date.now() - execution.startedAt) / 60000)}m ${Math.floor(((Date.now() - execution.startedAt) % 60000) / 1000)}s`;
+
+    await execution.save({session});
     await session.commitTransaction();
     await session.endSession();
 
-    return res.json({
-      success: true,
-      execution: execution.toObject(),
-      message: 'Execution completed'
-    });
+    res.json({ success: true, execution, message: 'Execution completed' });
 
   } catch (err) {
-    console.error('Execution error:', err);
+    console.error('Execution error!', err);
     if (session && session.inTransaction()) {
       await session.abortTransaction();
     }
     if (session) {
       await session.endSession();
     }
-    return res.status(500).json({ success: false, message: 'Server error' });
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 });
+
 
 // Get all executions
 router.get('/',fetchuser, async (req, res) => {
