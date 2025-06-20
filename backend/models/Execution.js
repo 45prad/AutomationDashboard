@@ -29,8 +29,7 @@ const ExecutionSchema = new mongoose.Schema({
         ref: 'User'
       },
       email: String,
-      ip: String,
-      description: String,
+      ips: [String], 
       status: {
         type: String,
         enum: ['pending', 'completed', 'failed'],
