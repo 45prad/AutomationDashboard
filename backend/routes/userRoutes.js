@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
 import User from '../models/User.js';
-import fetchuser from '../middleware/fetchUser.js';
+import fetchuser from '../middleware/fetchuser.js';
 
 const router = express.Router();
 

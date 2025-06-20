@@ -1,6 +1,6 @@
 import express from 'express';
 import Challenge from '../models/challenge.js'; // Adjust path as needed
-import fetchuser from '../middleware/fetchUser.js';
+import fetchuser from '../middleware/fetchuser.js';
 const router = express.Router();
 
 // GET /all - Get all challenge names and IDs for dropdown

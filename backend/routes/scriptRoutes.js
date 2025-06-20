@@ -2,7 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import Script from '../models/Script.js';
 import Challenge from '../models/challenge.js';
-import fetchuser from '../middleware/fetchUser.js';
+import fetchuser from '../middleware/fetchuser.js';
 
 const router = express.Router();
 

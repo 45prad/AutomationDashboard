@@ -1,7 +1,7 @@
 import express from 'express';
 import UserIpMapping from '../models/UserIpMapping.js';
 import User from '../models/User.js';
-import fetchuser from '../middleware/fetchUser.js';
+import fetchuser from '../middleware/fetchuser.js';
 
 const router = express.Router();
 
