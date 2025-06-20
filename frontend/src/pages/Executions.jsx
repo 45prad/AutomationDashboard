@@ -1,11 +1,10 @@
+
+
 import React, { useState, useEffect } from 'react';
-import { Play, X, Plus, ChevronDown, CheckCircle2, XCircle, Clock, Search, Filter, Info  } from 'lucide-react';
+import { Play, X, Plus, ChevronDown, CheckCircle2, XCircle, Clock, Search, Filter, Info, Upload } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useNavigate } from 'react-router-dom';
-
-
-
 
 function ErrorFallback({ error, resetErrorBoundary }) {
   return (
@@ -24,9 +23,7 @@ function ErrorFallback({ error, resetErrorBoundary }) {
 }
 
 const Executions = () => {
-  
-
-    const navigate = useNavigate();
+  const navigate = useNavigate();
   const backendURL = import.meta.env.VITE_Backend_URL;
   const token = localStorage.getItem('Hactify-Auth-token');
   
@@ -41,6 +38,7 @@ const Executions = () => {
     'Content-Type': 'application/json',
     'Auth-token': token
   };
+  
   const [scripts, setScripts] = useState([]);
   const [userIpMappings, setUserIpMappings] = useState([]);
   const [executions, setExecutions] = useState([]);
@@ -55,21 +53,30 @@ const Executions = () => {
     executions: null
   });
 
+  // Existing modal states
   const [showExecuteModal, setShowExecuteModal] = useState(false);
   const [selectedScript, setSelectedScript] = useState('');
   const [selectedUserIPs, setSelectedUserIPs] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-   const [showOutputModal, setShowOutputModal] = useState(false);
+  const [showOutputModal, setShowOutputModal] = useState(false);
   const [currentOutput, setCurrentOutput] = useState('');
 
+  // New Excel modal states
+  const [showExcelModal, setShowExcelModal] = useState(false);
+  const [excelFile, setExcelFile] = useState(null);
+  const [excelFileName, setExcelFileName] = useState('');
+  const [excelScript, setExcelScript] = useState('');
+
+  // Execution state
+  const [isExecuting, setIsExecuting] = useState(false);
+
   useEffect(() => {
-      if (!token) return;
+    if (!token) return;
     const fetchData = async () => {
-      
       try {
         // Fetch scripts
-        const scriptsResponse = await fetch(`${backendURL}/api/scripts/`,{
+        const scriptsResponse = await fetch(`${backendURL}/api/scripts/`, {
           headers
         });
         const scriptsData = await scriptsResponse.json();
@@ -80,14 +87,14 @@ const Executions = () => {
         }
 
         // Fetch user IP mappings
-        const userIpResponse = await fetch(`${backendURL}/api/userIpMapping/`,{
+        const userIpResponse = await fetch(`${backendURL}/api/userIpMapping/`, {
           headers
         });
         const userIpData = await userIpResponse.json();
         setUserIpMappings(userIpData || []);
 
         // Fetch executions
-        const executionsResponse = await fetch(`${backendURL}/api/executions/`,{
+        const executionsResponse = await fetch(`${backendURL}/api/executions/`, {
           headers
         });
         const executionsData = await executionsResponse.json();
@@ -115,11 +122,12 @@ const Executions = () => {
     fetchData();
   }, []);
 
-    const handleShowOutput = (output) => {
+  const handleShowOutput = (output) => {
     setCurrentOutput(output);
     setShowOutputModal(true);
   };
 
+  // Existing execution functions
   const handleAddUserIP = () => {
     setSelectedUserIPs([...selectedUserIPs, { userId: '', ip: '' }]);
   };
@@ -140,116 +148,187 @@ const Executions = () => {
     setSelectedUserIPs(selectedUserIPs.filter((_, i) => i !== index));
   };
 
- 
-
-
   const handleExecute = async () => {
-  if (!selectedScript) {
-    toast.error('Please select a script');
-    return;
-  }
+    if (!selectedScript) {
+      toast.error('Please select a script');
+      return;
+    }
 
-  if (selectedUserIPs.length === 0) {
-    toast.error('Please select at least one user and IP');
-    return;
-  }
+    if (selectedUserIPs.length === 0) {
+      toast.error('Please select at least one user and IP');
+      return;
+    }
 
-  if (selectedUserIPs.some(item => !item.userId || !item.ip)) {
-    toast.error('Please fill in all user and IP selections');
-    return;
-  }
+    if (selectedUserIPs.some(item => !item.userId || !item.ip)) {
+      toast.error('Please fill in all user and IP selections');
+      return;
+    }
 
-  try {
-    // Get the script name and user emails before execution for optimistic update
-    const script = scripts.find(s => s._id === selectedScript);
-    const users = selectedUserIPs.map(item => {
-      const user = usersWithIPs.find(u => u._id === item.userId);
-      return {
-        userId: item.userId,
-        email: user?.email || 'Unknown User',
-        ip: item.ip
-      };
-    });
+    const toastId = toast.loading('Starting script execution...');
+    setIsExecuting(true);
 
-    // Create optimistic execution data
-    const optimisticExecution = {
-      _id: `temp-${Date.now()}`,
-      script: {
-        _id: selectedScript,
-        name: script?.name || 'Loading...'
-      },
-      status: 'running',
-      createdAt: new Date().toISOString(),
-      targets: users.map(user => ({
-        user: {
-          _id: user.userId,
-          email: user.email
-        },
-        ip: user.ip,
-        status: 'running'
-      }))
-    };
-
-    // Add optimistic execution to state
-    setExecutions(prev => [optimisticExecution, ...prev]);
-
-    // Prepare the actual execution data
-    const executionData = {
-      scriptId: selectedScript,
-      targets: selectedUserIPs.map(item => {
+    try {
+      // Get the script name and user emails before execution for optimistic update
+      const script = scripts.find(s => s._id === selectedScript);
+      const users = selectedUserIPs.map(item => {
         const user = usersWithIPs.find(u => u._id === item.userId);
-        const ipInfo = user?.ipAddresses?.find(ip => ip.ip === item.ip);
-        
         return {
           userId: item.userId,
-          userEmail: user?.email || 'unknown@example.com',
-          ip: item.ip,
-          description: ipInfo?.description || ''
+          email: user?.email || 'Unknown User',
+          ip: item.ip
         };
-      })
-    };
+      });
 
-    // Call the API to execute the script
-    const response = await fetch(`${backendURL}/api/executions/execute`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-         'Auth-token': token
-      },
-      body: JSON.stringify(executionData)
-    });
+      // Create optimistic execution data
+      const optimisticExecution = {
+        _id: `temp-${Date.now()}`,
+        script: {
+          _id: selectedScript,
+          name: script?.name || 'Loading...'
+        },
+        status: 'running',
+        createdAt: new Date().toISOString(),
+        targets: users.map(user => ({
+          user: {
+            _id: user.userId,
+            email: user.email
+          },
+          ip: user.ip,
+          status: 'running'
+        }))
+      };
 
-    const data = await response.json();
+      // Add optimistic execution to state
+      setExecutions(prev => [optimisticExecution, ...prev]);
 
-    if (!response.ok) {
-      throw new Error(data.message || 'Failed to execute script');
+      // Prepare the actual execution data
+      const executionData = {
+        scriptId: selectedScript,
+        targets: selectedUserIPs.map(item => {
+          const user = usersWithIPs.find(u => u._id === item.userId);
+          const ipInfo = user?.ipAddresses?.find(ip => ip.ip === item.ip);
+          
+          return {
+            userId: item.userId,
+            userEmail: user?.email || 'unknown@example.com',
+            ip: item.ip,
+            description: ipInfo?.description || ''
+          };
+        })
+      };
+
+      // Call the API to execute the script
+      const response = await fetch(`${backendURL}/api/executions/execute`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Auth-token': token
+        },
+        body: JSON.stringify(executionData)
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to execute script');
+      }
+
+      // Show success message
+      toast.success('Script execution started successfully', { id: toastId });
+      
+      // Close the modal immediately after successful API call
+      setShowExecuteModal(false);
+      
+      // Refetch executions to get complete data
+      const executionsResponse = await fetch(`${backendURL}/api/executions/`, {
+        headers
+      });
+      const executionsData = await executionsResponse.json();
+      
+      if (executionsData.success) {
+        setExecutions(executionsData.executions || []);
+      }
+
+      // Reset form
+      setSelectedScript('');
+      setSelectedUserIPs([]);
+
+    } catch (error) {
+      console.error('Execution error:', error);
+      toast.error(error.message || 'Failed to execute script', { id: toastId });
+      // Remove the optimistic update if execution failed
+      setExecutions(prev => prev.filter(exec => !exec._id.startsWith('temp-')));
+    } finally {
+      setIsExecuting(false);
+    }
+  };
+
+  // New Excel upload functions
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setExcelFile(file);
+      setExcelFileName(file.name);
+    }
+  };
+
+  const handleExcelUpload = async () => {
+    if (!excelScript) {
+      toast.error('Please select a script');
+      return;
     }
 
-    // Show success message
-    toast.success('Script execution started successfully');
-    
-    // Refetch executions to get complete data
-    const executionsResponse = await fetch(`${backendURL}/api/executions/`,{
-      headers
-    });
-    const executionsData = await executionsResponse.json();
-    
-    if (executionsData.success) {
-      setExecutions(executionsData.executions || []);
+    if (!excelFile) {
+      toast.error('Please upload an Excel file');
+      return;
     }
 
-    // Close the modal and reset form
-    setShowExecuteModal(false);
-    setSelectedScript('');
-    setSelectedUserIPs([]);
+    const toastId = toast.loading('Starting execution from Excel...');
+    setIsExecuting(true);
 
-  } catch (error) {
-    console.error('Execution error:', error);
-    toast.error(error.message || 'Failed to execute script');
-    // Remove the optimistic update if execution failed
-    setExecutions(prev => prev.filter(exec => !exec._id.startsWith('temp-')));
-  }
-};
+    const formData = new FormData();
+    formData.append('excelFile', excelFile);
+    formData.append('scriptId', excelScript);
+
+    try {
+      const response = await fetch(`${backendURL}/api/executions/execute-from-excel`, {
+        method: 'POST',
+        headers: {
+          'Auth-token': token
+        },
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to execute from Excel');
+      }
+
+      toast.success('Script execution started from Excel file', { id: toastId });
+      setShowExcelModal(false);
+      setExcelFile(null);
+      setExcelFileName('');
+      setExcelScript('');
+
+      // Refresh executions
+      const executionsResponse = await fetch(`${backendURL}/api/executions/`, {
+        headers
+      });
+      const executionsData = await executionsResponse.json();
+      if (executionsData.success) {
+        setExecutions(executionsData.executions || []);
+      }
+
+    } catch (error) {
+      console.error('Excel upload error:', error);
+      toast.error(error.message || 'Failed to process Excel file', { id: toastId });
+    } finally {
+      setIsExecuting(false);
+    }
+  };
+
+  // Helper functions
   const getStatusIcon = (status) => {
     switch (status) {
       case 'completed':
@@ -372,13 +451,28 @@ const Executions = () => {
     <div className="h-full">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Script Executions</h1>
-        <button 
-          className="btn btn-primary flex items-center"
-          onClick={() => setShowExecuteModal(true)}
-        >
-          <Play className="h-5 w-5 mr-2" />
-          Execute Script
-        </button>
+        <div className="flex items-center gap-3">
+          {executions.some(e => e.status === 'running') && (
+            <div className="flex items-center text-sm text-blue-500">
+              <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-blue-500 mr-2"></div>
+              {executions.filter(e => e.status === 'running').length} running
+            </div>
+          )}
+          <button 
+            className="btn btn-secondary flex items-center"
+            onClick={() => setShowExcelModal(true)}
+          >
+            <Upload className="h-5 w-5 mr-2" />
+            Upload Excel
+          </button>
+          <button 
+            className="btn btn-primary flex items-center"
+            onClick={() => setShowExecuteModal(true)}
+          >
+            <Play className="h-5 w-5 mr-2" />
+            Execute Script
+          </button>
+        </div>
       </div>
 
       <div className="flex items-center gap-4 mb-6">
@@ -441,36 +535,25 @@ const Executions = () => {
                     ))}
                   </div>
                 </div>
-                {/* <div>
-                  <span className="text-sm text-[var(--text-secondary)]">Status</span>
+                <div>
+                  <span className="text-sm text-[var(--text-secondary)]">Output</span>
                   <div className="space-y-1">
                     {execution.targets.map((target, index) => (
-                      <p key={index} className="font-medium">
-                        {target.status} {target.error && `(${target.error})`}
-                      </p>
+                      <div key={index} className="flex items-center gap-2">
+                        <p className="font-medium truncate flex-1" title={target.output}>
+                          {target.output}
+                        </p>
+                        <button 
+                          onClick={() => handleShowOutput(target.output)}
+                          className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                          aria-label="View full output"
+                        >
+                          <Info className="h-4 w-4" />
+                        </button>
+                      </div>
                     ))}
                   </div>
-                </div> */}
-                <div>
-        <span className="text-sm text-[var(--text-secondary)]">Output</span>
-        <div className="space-y-1">
-          {execution.targets.map((target, index) => (
-            <div key={index} className="flex items-center gap-2">
-              <p className="font-medium truncate flex-1" title={target.output}>
-                {target.output}
-              </p>
-              <button 
-                onClick={() => handleShowOutput(target.output)}
-                className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                aria-label="View full output"
-              >
-                <Info className="h-4 w-4" />
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
-
+                </div>
                 <div>
                   <span className="text-sm text-[var(--text-secondary)]">Description</span>
                   <div className="space-y-1">
@@ -520,7 +603,8 @@ const Executions = () => {
         )}
       </div>
 
-       {showOutputModal && (
+      {/* Output Modal */}
+      {showOutputModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-[var(--background)] rounded-lg p-6 w-full max-w-3xl max-h-[80vh] flex flex-col">
             <div className="flex justify-between items-center mb-4">
@@ -549,14 +633,16 @@ const Executions = () => {
         </div>
       )}
 
+      {/* Execute Script Modal */}
       {showExecuteModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-[var(--background)] rounded-lg p-6 w-full max-w-2xl">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-medium">Execute Script</h3>
               <button 
                 onClick={() => setShowExecuteModal(false)}
                 className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                disabled={isExecuting}
               >
                 <X className="h-5 w-5" />
               </button>
@@ -570,6 +656,7 @@ const Executions = () => {
                     value={selectedScript}
                     onChange={(e) => setSelectedScript(e.target.value)}
                     className="input pr-10 appearance-none"
+                    disabled={isExecuting}
                   >
                     <option value="">Select a script</option>
                     {scripts.map(script => (
@@ -593,6 +680,7 @@ const Executions = () => {
                   <button 
                     className="text-sm text-[var(--primary)] hover:text-[var(--primary-hover)] flex items-center"
                     onClick={handleAddUserIP}
+                    disabled={isExecuting}
                   >
                     <Plus className="h-4 w-4 mr-1" />
                     Add User & IP
@@ -612,6 +700,7 @@ const Executions = () => {
                             value={item.userId}
                             onChange={(e) => handleUserChange(index, e.target.value)}
                             className="input"
+                            disabled={isExecuting}
                           >
                             <option value="">Select a user</option>
                             {usersWithIPs.map(user => (
@@ -626,7 +715,7 @@ const Executions = () => {
                             value={item.ip}
                             onChange={(e) => handleIPChange(index, e.target.value)}
                             className="input"
-                            disabled={!item.userId}
+                            disabled={!item.userId || isExecuting}
                           >
                             <option value="">Select an IP</option>
                             {item.userId && usersWithIPs.find(u => u._id === item.userId)?.ipAddresses.map((ip, i) => (
@@ -639,6 +728,7 @@ const Executions = () => {
                         <button
                           onClick={() => handleRemoveUserIP(index)}
                           className="text-red-500 hover:text-red-600"
+                          disabled={isExecuting}
                         >
                           <X className="h-5 w-5" />
                         </button>
@@ -652,16 +742,132 @@ const Executions = () => {
                 <button 
                   onClick={() => setShowExecuteModal(false)}
                   className="btn btn-secondary"
+                  disabled={isExecuting}
                 >
                   Cancel
                 </button>
                 <button 
                   onClick={handleExecute}
                   className="btn btn-primary flex items-center"
-                  disabled={!selectedScript || selectedUserIPs.length === 0}
+                  disabled={!selectedScript || selectedUserIPs.length === 0 || isExecuting}
                 >
-                  <Play className="h-4 w-4 mr-2" />
-                  Execute ({selectedUserIPs.filter(item => item.userId && item.ip).length} targets)
+                  {isExecuting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="h-4 w-4 mr-2" />
+                      Execute ({selectedUserIPs.filter(item => item.userId && item.ip).length} targets)
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Excel Upload Modal */}
+      {showExcelModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-[var(--background)] rounded-lg p-6 w-full max-w-2xl">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-medium">Execute from Excel</h3>
+              <button 
+                onClick={() => {
+                  setShowExcelModal(false);
+                  setExcelFile(null);
+                  setExcelFileName('');
+                }}
+                className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                disabled={isExecuting}
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium mb-2">Select Script</label>
+                <div className="relative">
+                  <select
+                    value={excelScript}
+                    onChange={(e) => setExcelScript(e.target.value)}
+                    className="input pr-10 appearance-none"
+                    disabled={isExecuting}
+                  >
+                    <option value="">Select a script</option>
+                    {scripts.map(script => (
+                      <option key={script._id || script.id} value={script._id || script.id}>
+                        {script.name} ({script.language})
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-[var(--text-secondary)]" />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Upload Excel File</label>
+                <div className="flex items-center gap-3">
+                  <label className="flex-1">
+                    <div className={`input cursor-pointer flex items-center justify-between ${isExecuting ? 'opacity-50' : ''}`}>
+                      <span className="truncate">
+                        {excelFileName || 'Choose file...'}
+                      </span>
+                      <span className="text-[var(--text-secondary)]">Browse</span>
+                    </div>
+                    <input 
+                      type="file" 
+                      className="hidden" 
+                      accept=".xlsx,.xls"
+                      onChange={handleFileChange}
+                      disabled={isExecuting}
+                    />
+                  </label>
+                </div>
+                <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                  File format: Excel with IP, UserEmail, and Description columns
+                </p>
+                <a 
+                  href="/sample-execution-template.xlsx" 
+                  download 
+                  className="text-sm text-[var(--primary)] hover:underline mt-1 inline-block"
+                >
+                  Download sample template
+                </a>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4">
+                <button 
+                  onClick={() => {
+                    setShowExcelModal(false);
+                    setExcelFile(null);
+                    setExcelFileName('');
+                  }}
+                  className="btn btn-secondary"
+                  disabled={isExecuting}
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleExcelUpload}
+                  className="btn btn-primary flex items-center"
+                  disabled={!excelScript || !excelFile || isExecuting}
+                >
+                  {isExecuting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="h-4 w-4 mr-2" />
+                      Execute from Excel
+                    </>
+                  )}
                 </button>
               </div>
             </div>

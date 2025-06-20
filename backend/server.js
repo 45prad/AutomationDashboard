@@ -1,7 +1,9 @@
+
+
+
 import express from 'express';
 import cors from 'cors';
 import connectToMongo from './db.js';
-import fileUpload from 'express-fileupload';
 import userRoutes from './routes/userRoutes.js';
 import scriptRoutes from './routes/scriptRoutes.js';
 import executionRoutes from './routes/executionRoutes.js';
@@ -13,7 +15,6 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// Configure __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -23,8 +24,7 @@ connectToMongo();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-
-// Create uploads directory if it doesn't exist
+// Ensure upload directories exist
 const uploadsDir = path.join(__dirname, 'uploads');
 const scriptsDir = path.join(uploadsDir, 'scripts');
 
@@ -40,16 +40,8 @@ if (!fs.existsSync(scriptsDir)) {
 
 // Middleware
 app.use(cors());
-app.use('/api/scripts', scriptRoutes);
-app.use(fileUpload({
-  useTempFiles: false, // Don't use temp files
-  tempFileDir: '/tmp/', // If using temp files, specify directory
-  createParentPath: true // Auto-create the upload path if not exists (extra safety)
-}));
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
 
 // Routes
 app.get('/', (req, res) => {
@@ -57,12 +49,12 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api/auth', userRoutes);
-
+app.use('/api/scripts', scriptRoutes);
 app.use('/api/executions', executionRoutes);
 app.use('/api/userIpMapping', UserIpMappingRoutes);
 app.use('/api/challenges', challengeRoutes);
 
-// Error handling middleware
+// Global error handler
 app.use(errorHandler);
 
 app.listen(PORT, () => {
