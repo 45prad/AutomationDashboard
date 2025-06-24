@@ -96,6 +96,41 @@ router.post('/',fetchuser, upload.single('file'), async (req, res) => {
 });
 
 
+// router.get('/', fetchuser, async (req, res) => {
+//   try {
+//     const scripts = await Script.find()
+//       .populate('challenge', 'name _id') // Only include challenge name and id
+//       .sort({ createdAt: -1 }); // Newest first
+
+//     const formattedScripts = scripts.map(script => ({
+//       id: script._id,
+//       name: script.name,
+//       description: script.description,
+//       language: script.language,
+//       challenge: {
+//         id: script.challenge._id,
+//         name: script.challenge.name
+//       },
+//       filePath: script.filePath,
+//       createdAt: script.createdAt,
+//       updatedAt: script.updatedAt
+//     }));
+
+//     res.status(200).json({
+//       success: true,
+//       count: formattedScripts.length,
+//       scripts: formattedScripts
+//     });
+//   } catch (error) {
+//     console.error('Error fetching scripts:', error);
+//     res.status(500).json({
+//       success: false,
+//       message: 'Failed to fetch scripts',
+//       error: error.message
+//     });
+//   }
+// });
+
 router.get('/', fetchuser, async (req, res) => {
   try {
     const scripts = await Script.find()
@@ -107,10 +142,10 @@ router.get('/', fetchuser, async (req, res) => {
       name: script.name,
       description: script.description,
       language: script.language,
-      challenge: {
+      challenge: script.challenge ? {
         id: script.challenge._id,
         name: script.challenge.name
-      },
+      } : null, // Handle null challenge case
       filePath: script.filePath,
       createdAt: script.createdAt,
       updatedAt: script.updatedAt
@@ -130,7 +165,6 @@ router.get('/', fetchuser, async (req, res) => {
     });
   }
 });
-
 
 router.delete('/delete-script/:id', fetchuser, async (req, res) => {
   const { id } = req.params;
